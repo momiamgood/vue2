@@ -3,9 +3,6 @@ let eventBus = new Vue ()
 Vue.component('desk', {
     template: `
     <div class='desk'>
-     <div v-if="errors" v-for="error in errors" class="errors" id="errors">
-           <p>{{ error }}</p>
-     </div>
      <div>
             <createTask></createTask>
             <div>
@@ -16,56 +13,6 @@ Vue.component('desk', {
      </div>
     </div>
     `,
-    data () {
-        return {
-            col1: [],
-            col2: [],
-            col3: [],
-            errors: []
-        }
-    },
-    mounted (){
-        eventBus.$on('error', error => {
-            this.errors.push(error);
-        })
-
-        eventBus.$on('task_list', data => {
-                this.errors = [];
-                if (this.col1.length < 3) {
-                    this.col1.push(data);
-                } else {
-                    eventBus.$emit('error', 'Вы еще не завершили предыдущие задачи');
-                }
-            }
-        )
-
-        eventBus.$on('semiDone', list => {
-                this.errors = [];
-                if (this.col2.length < 5) {
-                    this.col2.push(list);
-                } else {
-                    eventBus.$emit('error', 'Вы еще не завершили предыдущие задачи');
-                }
-            }
-        )
-
-        eventBus.$on('allDone', data => {
-                this.col3.push(data);
-            }
-        )
-    },
-    watch: {
-        col1 (newVal) {
-            if (newVal < 3){
-                this.errors.splice(0,this.errors.length);
-            }
-        },
-        col2 (newVal) {
-            if (newVal < 5){
-                this.errors.splice(0,this.errors.length);
-            }
-        }
-    }
 })
 
 
@@ -103,6 +50,10 @@ Vue.component('col2', {
     template: `
         
         <div class="col">
+        <div v-if="errors" v-for="error in errors" class="errors" id="errors">
+           <p>{{ error }}</p>
+        </div>
+        
         
         <h2>50% выполнено</h2>
             <div v-bind:class="{ disables: errors}">
@@ -125,9 +76,10 @@ Vue.component('col2', {
     methods: {
         allDoneTask(list, task){
             if (task.status === false) {
-                task.status = true;
+                task.status += 1;
                 list.done++;
             }
+
             let count = 0;
             for (let i = 0; i < 5; ++i) {
                 if (list.tasks[i].task !== null) {
@@ -144,17 +96,23 @@ Vue.component('col2', {
     mounted() {
         {
             eventBus.$on('semiDone', list => {
-                    this.errors = [];
                     if (this.secondDoneTasks.length < 5) {
                         this.secondDoneTasks.push(list);
-                    } else {
-                        eventBus.$emit('error', 'Вы еще не завершили предыдущие задачи');
+                    } else if (this.errors.length < 1){
+                        this.errors.push('Вы еще не выполнили предыдущие задачи');
                     }
                 }
             )
 
         }
     },
+    watch: {
+        secondDoneTasks(newVal){
+            if (this.secondDoneTasks.length < 5){
+                this.errors.splice(0, this.errors.length);
+            }
+        }
+    }
 })
 
 
@@ -208,23 +166,22 @@ Vue.component('col1', {
     mounted() {
        {
             eventBus.$on('task_list', data => {
-                this.errors = [];
                     if (this.firstColTasks.length < 3) {
                         this.firstColTasks.push(data);
-                    } else {
-                        eventBus.$emit('error', 'Вы еще не завершили предыдущие задачи');
+                    } else if (this.errors.length < 1){
+                        this.errors.push('Вы еще не выполнили предыдущие задачи');
                     }
                 }
             )
        }
     },
     watch: {
-        firstColTasks(newVal) {
-            if (this.firstColTasks.length === 3){
-                this.block = true
+        firstColTasks(newVal){
+            if (this.firstColTasks.length < 3){
+                this.errors.splice(0, this.errors.length);
             }
         }
-    }
+        }
 })
 
 
