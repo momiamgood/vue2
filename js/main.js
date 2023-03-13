@@ -105,10 +105,6 @@ Vue.component('col2', {
                 eventBus.$emit('allDone', list);
                 this.secondDoneTasks.splice(this.secondDoneTasks.indexOf(list), 1);
             }
-
-            if (this.secondDoneTasks.length === 5) {
-                eventBus.$emit('block', true);
-            }
         }
     },
     mounted() {
@@ -158,7 +154,6 @@ Vue.component('col1', {
     `,
     data() {
         return {
-            block: false,
             selectedTask:null,
             firstColTasks:[],
             errors: []
