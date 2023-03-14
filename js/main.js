@@ -6,16 +6,161 @@ Vue.component('desk', {
      <div>
             <createTask></createTask>
             <div>
-                <col1></col1>
-                <col2></col2>
-                <col3></col3>
+                <div class="col">
+                <h2>0% выполнено</h2>
+                <div>
+                    <div v-for="task in firstColTasks" class="col-item">
+                        <p class="task-list-name">{{ task.list_name }}</p>
+                        <div v-for="t in task.tasks">
+                                <p @click="doneTask(task, t)" v-bind:class="{ done: t.status }"> {{ t.task }}</p>
+                        </div>
+                    </div>
+                
+                </div>
+            </div>
+                <div class="col">
+        
+        <h2>50% выполнено</h2>
+            <div v-bind:class="{ disables: errors}">
+                    <div v-for="task in secondDoneTasks" class="col-item">
+                        <p class="task-list-name">{{ task.list_name }}</p>
+                        <div v-for="t in task.tasks">
+                                <p @click="allDoneTask(task, t)" v-bind:class="{ done: t.status }"> {{ t.task }}</p>                       
+                        </div>
+                    </div>
+            </div>
+        </div>
+                <div class="col">
+            <h2>100% выполнено</h2>
+               <div>
+                    <div v-if='allDoneTasks' v-for="task in allDoneTasks" class="col-item">
+                        <p class="task-list-name">{{ task.list_name }}</p>
+                        <div v-for="t in task.tasks">
+                                <p v-bind:class="{ done: t.status }"> {{ t.task }}</p>
+                        </div>
+                        <p>{{ task.date }}</p>
+                    </div>
+            </div>
+            </div>
             </div>
      </div>
     </div>
     `,
+    data() {
+        return {
+            firstColTasks:[],
+            secondDoneTasks: [],
+            allDoneTasks: [],
+            errors: []
+        }
+    },
+    methods: {
+        doneTask(list, task){
+                if (task.status === false) {
+                    task.status = true;
+                    list.done++;
+                }
+
+                let count = 0;
+
+                for (let i = 0; i < 5; ++i) {
+                    if (list.tasks[i].task !== null) {
+                        count++;
+                    }
+                }
+
+                if (list.done / count * 100 >= 50 && this.secondDoneTasks.length < 5) {
+                    this.secondDoneTasks.push(list);
+                    this.firstColTasks.splice(this.firstColTasks.indexOf(list), 1);
+                }
+                else if (this.errors.length < 1) this.errors.push('Вы еще не предыдущие задачи, сначала выполните задачи из второго столбика');
+        },
+
+        allDoneTask(list, task){
+            if (task.status === false) {
+                task.status += 1;
+                list.done++;
+            }
+
+            let count = 0;
+            for (let i = 0; i < 5; ++i) {
+                if (list.tasks[i].task !== null) {
+                    count++;
+                }
+            }
+
+            if ((list.done / count) * 100 === 100) {
+                this.allDoneTasks.push(list);
+                this.secondDoneTasks.splice(this.secondDoneTasks.indexOf(list), 1);
+            }
+        }
+    },
+    mounted() {
+        this.firstColTasks = JSON.parse(localStorage.getItem("firstColTasks")) || [];
+        {
+            eventBus.$on('task_list', data => {
+                    if (this.firstColTasks.length < 3) {
+                        this.firstColTasks.push(data);
+                    } else if (this.errors.length < 1){
+                        this.errors.push('Вы еще не выполнили предыдущие задачи, сначала выполните задачи из 1 столбика');
+                    }
+                }
+            )
+        }
+
+        this.secondDoneTasks = JSON.parse(localStorage.getItem('secondDoneTasks')) || [];
+        {
+            eventBus.$on('semiDone', list => {
+                    if (this.secondDoneTasks.length < 5) {
+                        this.secondDoneTasks.push(list);
+
+                    } else if (this.errors.length < 1){
+                        this.errors.push('Вы еще не выполнили предыдущие задачи');
+                    }
+                }
+            )
+        }
+
+        this.allDoneTasks = JSON.parse(localStorage.getItem("allDoneTasks")) || [];
+        {
+            eventBus.$on('allDone', data => {
+                    data.date = new Date();
+                    this.allDoneTasks.push(data);
+                    localStorage.setItem('allDoneTasks', JSON.stringify(this.allDoneTasks));
+                }
+            )
+        }
+    },
+    watch: {
+        firstColTasks: {
+            handler(newValue, oldValue) {
+                if (this.firstColTasks.length < 3){
+                    this.errors.splice(0, this.errors.length);
+                }
+                localStorage.setItem('firstColTasks', JSON.stringify(newValue));
+            },
+            deep: true
+        },
+
+        secondDoneTasks: {
+            handler(newValue, oldValue) {
+                if (this.secondDoneTasks.length < 5){
+                    this.errors.splice(0, this.errors.length);
+                }
+                localStorage.setItem('secondDoneTasks', JSON.stringify(newValue));
+            },
+            deep: true
+        },
+        allDoneTask: {
+            handler(newValue, oldValue) {
+                localStorage.setItem('allDoneTask', JSON.stringify(newValue));
+            },
+            deep: true
+        },
+    }
 })
 
-
+/*
 Vue.component('col3', {
     template: `
             <div class="col">
@@ -28,7 +173,6 @@ Vue.component('col3', {
                         </div>
                         <p>{{ task.date }}</p>
                     </div>
-                
             </div>
             </div>
     `,
@@ -41,14 +185,11 @@ Vue.component('col3', {
         this.allDoneTasks = JSON.parse(localStorage.getItem("allDoneTasks")) || [];
         {
             eventBus.$on('allDone', data => {
-
                     data.date = new Date();
                     this.allDoneTasks.push(data);
                     localStorage.setItem('allDoneTasks', JSON.stringify(this.allDoneTasks));
                 }
             )
-
-
         }},
     watch: {
         allDoneTask: {
@@ -59,7 +200,10 @@ Vue.component('col3', {
         }
     }
 })
+*/
 
+
+/*
 Vue.component('col2', {
     template: `
         
@@ -113,6 +257,7 @@ Vue.component('col2', {
             eventBus.$on('semiDone', list => {
                     if (this.secondDoneTasks.length < 5) {
                         this.secondDoneTasks.push(list);
+
                     } else if (this.errors.length < 1){
                         this.errors.push('Вы еще не выполнили предыдущие задачи');
                     }
@@ -132,8 +277,8 @@ Vue.component('col2', {
         }
     }
 })
-
-
+*/
+/*
 Vue.component('col1', {
     template: `
         <div class="col">
@@ -141,7 +286,7 @@ Vue.component('col1', {
                 <p>{{ error }}</p>
         </div>
         <h2>0% выполнено</h2>
-            <div v-bind:class="{ disabled: block }">
+            <div>
                     <div v-for="task in firstColTasks" class="col-item">
                         <p class="task-list-name">{{ task.list_name }}</p>
                         <div v-for="t in task.tasks">
@@ -205,6 +350,8 @@ Vue.component('col1', {
         }
     }
 })
+
+*/
 
 
 Vue.component('createTask', {
